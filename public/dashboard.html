@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard - OSINT Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f13 0%, #1a1a24 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: #1a1a24;
+            padding: clamp(10px, 3vw, 15px) clamp(15px, 4vw, 30px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a35;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar h1 {
+            color: #00d4ff;
+            margin: 0;
+            font-size: clamp(18px, 4vw, 22px);
+        }
+
+        .logout-btn {
+            background: #ff5252;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .logout-btn:active {
+            transform: scale(0.95);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: clamp(20px, 4vw, 30px) clamp(15px, 4vw, 20px);
+            flex: 1;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 32px);
+            color: #00d4ff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 16px;
+            margin-bottom: clamp(20px, 4vw, 30px);
+        }
+
+        .stats {
+            display: flex;
+            gap: clamp(10px, 3vw, 15px);
+            justify-content: center;
+            margin-bottom: clamp(20px, 4vw, 30px);
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: #1a1a24;
+            padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
+            border-radius: 8px;
+            border: 1px solid #2a2a35;
+            font-size: 14px;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .stat-badge span {
+            color: #00d4ff;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
+            font-size: clamp(16px, 4vw, 18px);
+        }
+
+        .search-box {
+            background: #1a1a24;
+            padding: clamp(20px, 5vw, 30px);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #2a2a35;
+            margin-bottom: clamp(20px, 4vw, 30px);
+        }
+
+        .input-group {
+            margin-bottom: clamp(15px, 3vw, 20px);
+        }
+
+        input[type="tel"] {
+            width: 100%;
+            padding: clamp(12px, 3vw, 15px);
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #252532;
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        input[type="tel"]:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .lookup-btn {
+            width: 100%;
+            padding: clamp(12px, 3vw, 15px);
+            background: linear-gradient(135deg, #00d4ff, #007bff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .lookup-btn:active {
+            transform: scale(0.98);
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-card {
+            background: #1a1a24;
+            padding: clamp(15px, 4vw, 25px);
+            border-radius: 12px;
+            margin-bottom: clamp(15px, 3vw, 20px);
+            border: 1px solid #2a2a35;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2a35;
+            flex-wrap: wrap;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #007bff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .name-section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .name-section h3 {
+            color: #fff;
+            font-size: clamp(18px, 4vw, 20px);
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .aka {
+            color: #888;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .operator-badge {
+            background: #252532;
+            color: #4caf50;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #252532;
+            border-radius: 8px;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-icon {
+            color: #00d4ff;
+            font-size: 18px;
+            min-width: 20px;
+        }
+
+        .detail-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .detail-label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            color: #e0e0e0;
+            font-size: 15px;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .detail-value.highlight {
+            color: #00d4ff;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #00d4ff;
+            font-size: 16px;
+        }
+
+        .error {
+            background: rgba(255, 82, 82, 0.1);
+            color: #ff5252;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            background: #1a1a24;
+            border-radius: 12px;
+            border: 1px solid #2a2a35;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            color: #666;
+            font-size: 13px;
+            text-align: center;
+            border-top: 1px solid #2a2a35;
+        }
+
+        footer a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .result-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .operator-badge {
+                margin-top: 10px;
+            }
+
+            .stats {
+                flex-direction: column;
+            }
+
+            .stat-badge {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            input[type="tel"], .lookup-btn {
+                font-size: 16px;
+            }
+
+            .detail-row {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🔍 OSINT Dashboard</h1>
+        <a href="#" class="logout-btn" onclick="logout()">Logout</a>
+    </nav>
+
+    <div class="container">
+        <h1 class="page-title">Phone Lookup — OSINT Tool</h1>
+        <p class="subtitle">Phone Number Details</p>
+
+        <div class="stats">
+            <div class="stat-badge">
+                Remaining
+                <span id="searchesLeft">-</span>
+            </div>
+            <div class="stat-badge">
+                Expires
+                <span id="expiry">-</span>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <div class="input-group">
+                <input type="tel" id="phoneInput" placeholder="Enter a 10-digit number" maxlength="10" autocomplete="tel">
+            </div>
+            <button class="lookup-btn" onclick="searchPhone()">Lookup</button>
+            <div id="error" class="error"></div>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <footer>
+        Developed By <a href="#">Developer</a> &nbsp;|&nbsp; Secured By <a href="#">Security</a><br>
+        Built for intelligence professionals.
+    </footer>
+
+    <script>
+        // ============ AUTHENTICATION CHECK ============
+        const token = localStorage.getItem('auth_token');
+        
+        // Agar token nahi hai to login page pe bhej do
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // ============ AUTO-LOGOUT TIMER ============
+        let statusCheckInterval;
+        
+        // Har 30 seconds me status check karo
+        function startStatusCheck() {
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/dashboard', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    // Agar 401 ya 403 aaye to logout karo
+                    if (res.status === 401 || res.status === 403) {
+                        const data = await res.json();
+                        clearInterval(statusCheckInterval);
+                        alert('⚠️ ' + (data.error || 'Session expired. Please login again.'));
+                        logout();
+                    }
+                } catch (err) {
+                    console.error('Status check error:', err);
+                }
+            }, 30000); // 30 seconds
+        }
+
+        // Page load hone pe pehle check karo
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/dashboard', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (res.status === 401) {
+                    alert('⚠️ Invalid session. Please login again.');
+                    logout();
+                    return false;
+                } else if (res.status === 403) {
+                    const data = await res.json();
+                    alert('⚠️ ' + (data.error || 'Access denied.'));
+                    logout();
+                    return false;
+                }
+                
+                return true;
+            } catch (err) {
+                console.error('Auth check error:', err);
+                return false;
+            }
+        }
+
+        // ============ DASHBOARD FUNCTIONS ============
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (res.status === 401 || res.status === 403) {
+                    logout();
+                    return;
+                }
+                
+                const data = await res.json();
+                document.getElementById('searchesLeft').innerText = data.searchesLeft === -1 ? '∞' : data.searchesLeft;
+                document.getElementById('expiry').innerText = data.expiry;
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return 'U';
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function formatValue(value, defaultValue = 'Not Available') {
+            if (!value || value === 'N/A' || value === 'null' || value === 'undefined') {
+                return defaultValue;
+            }
+            return value;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleString('en-IN', { 
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        async function searchPhone() {
+            const phone = document.getElementById('phoneInput').value.trim();
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+
+            if (!phone) {
+                showError('Please enter a phone number');
+                return;
+            }
+
+            if (!/^\d{10}$/.test(phone)) {
+                showError('Please enter a valid 10-digit number');
+                return;
+            }
+
+            errorDiv.classList.remove('show');
+            resultsDiv.classList.remove('show');
+            resultsDiv.innerHTML = '<div class="loading">⏳ Searching database...</div>';
+            resultsDiv.classList.add('show');
+
+            try {
+                const res = await fetch('/api/search?phone=' + encodeURIComponent(phone), {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                // Agar 401 ya 403 aaye to logout karo
+                if (res.status === 401 || res.status === 403) {
+                    const data = await res.json();
+                    alert('⚠️ ' + (data.error || 'Session expired. Please login again.'));
+                    logout();
+                    return;
+                }
+                
+                const data = await res.json();
+
+                if (data.error) {
+                    showError(data.error);
+                    resultsDiv.classList.remove('show');
+                    return;
+                }
+
+                loadDashboard();
+
+                if (!data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state">
+                            🔍 No records found for this number
+                            ${data.searchesRemaining !== -1 ? `<br><br>Searches Remaining: <span style="color: #00d4ff;">${data.searchesRemaining}</span>` : ''}
+                        </div>
+                    `;
+                    return;
+                }
+
+                const resultsHTML = data.results.map((result, index) => {
+                    const name = formatValue(result.name, 'Unknown');
+                    const operator = formatValue(result.circle, 'Unknown');
+                    const mobile = formatValue(result.mobile, phone);
+                    const address = formatValue(result.address);
+                    const alternate = formatValue(result.alt, 'N/A');
+                    const email = formatValue(result.email);
+                    const truecallerName = formatValue(result.truecaller_name || data.truecaller_name);
+                    const aadhar = formatValue(result.id);
+                    const fname = formatValue(result.fname);
+
+                    return `
+                        <div class="result-card">
+                            <div class="result-header">
+                                <div class="avatar">${getInitials(name)}</div>
+                                <div class="name-section">
+                                    <h3>${name}</h3>
+                                    ${fname !== 'Not Available' ? `<div class="aka">S/O: ${fname}</div>` : ''}
+                                </div>
+                                <div class="operator-badge">${operator}</div>
+                            </div>
+
+                            <div class="detail-row">
+                                <div class="detail-icon">📱</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Mobile</div>
+                                    <div class="detail-value highlight">${mobile}</div>
+                                </div>
+                            </div>
+
+                            ${alternate !== 'N/A' ? `
+                            <div class="detail-row">
+                                <div class="detail-icon">📞</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Alternate</div>
+                                    <div class="detail-value">${alternate}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <div class="detail-row">
+                                <div class="detail-icon">📍</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Address</div>
+                                    <div class="detail-value">${address}</div>
+                                </div>
+                            </div>
+
+                            ${email !== 'Not Available' ? `
+                            <div class="detail-row">
+                                <div class="detail-icon">📧</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Email</div>
+                                    <div class="detail-value">${email}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${aadhar !== 'Not Available' ? `
+                            <div class="detail-row">
+                                <div class="detail-icon">🆔</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Aadhar Number</div>
+                                    <div class="detail-value">${aadhar}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${truecallerName !== 'Not Available' ? `
+                            <div class="detail-row">
+                                <div class="detail-icon">👤</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Truecaller Name</div>
+                                    <div class="detail-value">${truecallerName}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${data.cached ? `
+                            <div class="detail-row" style="background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.3);">
+                                <div class="detail-icon">⚡</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Cache Info</div>
+                                    <div class="detail-value" style="color: #4caf50;">
+                                        Cached Result ${data.cached_at ? `- ${formatDate(data.cached_at)}` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <div class="detail-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #2a2a35; background: transparent;">
+                                <div class="detail-icon">🔍</div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Searches Remaining</div>
+                                    <div class="detail-value highlight">${data.searchesRemaining === -1 ? '∞' : data.searchesRemaining}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                resultsDiv.innerHTML = resultsHTML;
+
+            } catch (err) {
+                showError('Network error. Please try again.');
+                resultsDiv.classList.remove('show');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.innerText = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        function logout() {
+            clearInterval(statusCheckInterval);
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login.html';
+        }
+
+        // ============ INITIALIZE ============
+        (async () => {
+            // Pehle auth check karo
+            const isAuth = await checkAuth();
+            
+            if (isAuth) {
+                // Agar authenticated hai to dashboard load karo
+                loadDashboard();
+                
+                // Auto-logout timer start karo
+                startStatusCheck();
+                
+                // Enter key support
+                document.getElementById('phoneInput').addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') searchPhone();
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

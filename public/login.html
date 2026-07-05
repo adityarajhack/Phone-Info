@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secure Login - OSINT Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f13 0%, #1a1a24 100%);
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .card {
+            background: #1a1a24;
+            padding: clamp(20px, 5vw, 40px);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #2a2a35;
+        }
+
+        h2 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: clamp(20px, 4vw, 30px);
+            font-weight: 600;
+            font-size: clamp(20px, 5vw, 24px);
+        }
+
+        .input-group {
+            margin-bottom: clamp(15px, 3vw, 20px);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: clamp(12px, 3vw, 15px);
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #252532;
+            color: #fff;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        button {
+            width: 100%;
+            padding: clamp(12px, 3vw, 15px);
+            background: linear-gradient(135deg, #00d4ff, #007bff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .msg {
+            text-align: center;
+            margin-top: clamp(15px, 3vw, 20px);
+            font-size: 14px;
+            min-height: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            word-break: break-word;
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: clamp(20px, 3vw, 25px);
+            font-size: 14px;
+        }
+
+        .footer-link a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+                align-items: flex-start;
+                padding-top: 40px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            input, button {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            body {
+                padding-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🔑 Secure Login</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="password">Access Password</label>
+                <input type="password" id="password" placeholder="Enter your secure password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Login to Dashboard</button>
+        </form>
+        <div id="message" class="msg"></div>
+        <div class="footer-link">
+            Need access? <a href="/signup.html">Request here</a>
+        </div>
+    </div>
+
+    <script>
+        // Agar already logged in hai to dashboard pe bhej do
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            window.location.href = '/dashboard.html';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('message');
+            msg.innerText = '';
+            
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('auth_token', result.token);
+                    window.location.href = '/dashboard.html';
+                } else {
+                    msg.innerText = '❌ ' + (result.error || 'Invalid password or account locked');
+                }
+            } catch (err) {
+                msg.innerText = '❌ Network error. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
