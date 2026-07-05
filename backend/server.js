@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
@@ -19,7 +20,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      scriptSrcAttr: ["'unsafe-inline'"],  // ← Ye add karo (inline event handlers ke liye)
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
       connectSrc: ["'self'", "https://free-api-anuragsingh.vercel.app"],
@@ -47,8 +48,12 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' }
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Smart path detection - locally aur Railway dono me kaam karega
+let publicPath = path.join(__dirname, 'public');
+if (!fs.existsSync(publicPath)) {
+  publicPath = path.join(__dirname, '..', 'public');
+}
+app.use(express.static(publicPath));
 
 // Helper: Generate device fingerprint
 function getFingerprint(req) {
@@ -249,20 +254,19 @@ app.get('/api/dashboard', authenticate, (req, res) => {
   });
 });
 
-// Phone search — only count if results found
+// Phone search
 app.get('/api/search', authenticate, async (req, res) => {
   const { phone } = req.query;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });
 
   const user = req.user;
 
-  // Check search limit BEFORE search
+  // Check search limit
   if (user.search_limit !== -1 && user.searches_used >= user.search_limit) {
     return res.status(403).json({ error: '❌ Search limit exceeded. Contact admin for upgrade.' });
   }
 
   try {
-    // Call external API
     const apiUrl = `https://free-api-anuragsingh.vercel.app/api/number?num=${encodeURIComponent(phone)}`;
     const response = await fetch(apiUrl);
     const data = await response.json();
@@ -270,18 +274,17 @@ app.get('/api/search', authenticate, async (req, res) => {
     const results = data.results || [];
     const resultsCount = results.length;
 
-    // ONLY increment if actual results found
+    // Only increment if results found
     if (resultsCount > 0) {
       db.prepare('UPDATE users SET searches_used = searches_used + 1 WHERE id = ?').run(user.id);
     }
 
-    // Log search (always log, even if empty)
+    // Log search
     db.prepare(`
       INSERT INTO search_logs (user_id, phone, results_count, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?)
     `).run(user.id, phone, resultsCount, req.ip, req.headers['user-agent']);
 
-    // Calculate remaining
     const newSearchesUsed = user.searches_used + (resultsCount > 0 ? 1 : 0);
     const searchesRemaining = user.search_limit === -1 ? -1 : Math.max(0, user.search_limit - newSearchesUsed);
 
@@ -359,7 +362,7 @@ app.get('/api/admin/logs', (req, res) => {
   res.json(logs);
 });
 
-// Renew user access (admin)
+// Renew user access
 app.post('/api/admin/renew', (req, res) => {
   const token = req.headers['x-admin-token'];
   if (token !== process.env.ADMIN_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
@@ -417,14 +420,13 @@ app.post('/api/admin/renew', (req, res) => {
 
 // Admin panel page
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+  res.sendFile(path.join(publicPath, 'admin.html'));
 });
 
-// ============ ROOT REDIRECT ============
+// Root redirect
 app.get('/', (req, res) => {
   res.redirect('/login.html');
 });
-
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
@@ -435,3 +437,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🛡️ Admin: http://localhost:${PORT}/admin`);
   console.log(`\n✅ Telegram bot active and listening...\n`);
 });
+
+module.exports = app;
