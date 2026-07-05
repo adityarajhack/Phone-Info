@@ -427,7 +427,7 @@ app.get('/', (req, res) => {
 
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`📱 Signup: http://localhost:${PORT}/signup.html`);
   console.log(`🔑 Login: http://localhost:${PORT}/login.html`);
