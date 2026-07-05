@@ -1,11 +1,13 @@
 {
-
   "name": "phone-osint-backend",
   "version": "1.0.0",
   "description": "OSINT Phone Lookup with Telegram Admin Control",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "dependencies": {
     "express": "^4.18.2",
