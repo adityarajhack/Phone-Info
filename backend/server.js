@@ -49,10 +49,8 @@ const authLimiter = rateLimit({
 });
 
 // Smart path detection
-let publicPath = path.join(__dirname, 'public');
-if (!fs.existsSync(publicPath)) {
-  publicPath = path.join(__dirname, '..', 'public');
-}
+// Railway ke liye - public folder parent directory me hai
+const publicPath = path.join(__dirname, '..', 'public');
 app.use(express.static(publicPath));
 
 // Helper functions
