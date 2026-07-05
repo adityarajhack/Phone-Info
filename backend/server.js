@@ -48,21 +48,20 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' }
 });
 
-// Smart path detection - locally aur Railway dono me kaam karega
+// Smart path detection
 let publicPath = path.join(__dirname, 'public');
 if (!fs.existsSync(publicPath)) {
   publicPath = path.join(__dirname, '..', 'public');
 }
 app.use(express.static(publicPath));
 
-// Helper: Generate device fingerprint
+// Helper functions
 function getFingerprint(req) {
   const ua = req.headers['user-agent'] || '';
   const ip = req.ip || req.connection.remoteAddress;
   return Buffer.from(`${ua}:${ip}`).toString('base64').substring(0, 32);
 }
 
-// Helper: Check failed login attempts
 function checkFailedLogin(identifier) {
   const record = db.prepare('SELECT * FROM failed_logins WHERE identifier = ?').get(identifier);
   if (!record) return { allowed: true };
@@ -81,7 +80,6 @@ function checkFailedLogin(identifier) {
   return { allowed: true };
 }
 
-// Helper: Record failed login
 function recordFailedLogin(identifier) {
   const existing = db.prepare('SELECT * FROM failed_logins WHERE identifier = ?').get(identifier);
   if (existing) {
@@ -92,12 +90,10 @@ function recordFailedLogin(identifier) {
   }
 }
 
-// Helper: Clear failed login
 function clearFailedLogin(identifier) {
   db.prepare('DELETE FROM failed_logins WHERE identifier = ?').run(identifier);
 }
 
-// Helper: Check if user access is expired
 function checkExpiry(user) {
   if (user.status !== 'active') return false;
   if (user.expiry_date === 'permanent') return true;
@@ -110,7 +106,6 @@ function checkExpiry(user) {
   return true;
 }
 
-// Auth middleware
 function authenticate(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -130,9 +125,7 @@ function authenticate(req, res, next) {
   }
 }
 
-// ============ API ROUTES ============
-
-// Signup
+// API Routes
 app.post('/api/signup', async (req, res) => {
   const { name, mobile, email } = req.body;
   
@@ -171,7 +164,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Login
 app.post('/api/login', authLimiter, (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
@@ -179,13 +171,11 @@ app.post('/api/login', authLimiter, (req, res) => {
   const ip = req.ip;
   const fingerprint = getFingerprint(req);
 
-  // Check if IP is locked
   const ipCheck = checkFailedLogin(ip);
   if (!ipCheck.allowed) {
     return res.status(429).json({ error: `Too many failed attempts. Locked until ${ipCheck.lockedUntil}` });
   }
 
-  // Find user by password
   const users = db.prepare("SELECT * FROM users WHERE status IN ('active', 'expired') AND password_hash IS NOT NULL").all();
   let matchedUser = null;
 
@@ -202,7 +192,6 @@ app.post('/api/login', authLimiter, (req, res) => {
     return res.status(401).json({ error: 'Invalid password' });
   }
 
-  // Check if account is active
   if (matchedUser.status === 'banned') {
     return res.status(403).json({ error: 'Account banned' });
   }
@@ -211,22 +200,18 @@ app.post('/api/login', authLimiter, (req, res) => {
     return res.status(403).json({ error: 'Access expired. Contact admin for renewal.' });
   }
 
-  // Clear failed attempts
   clearFailedLogin(ip);
 
-  // Log successful login
   db.prepare(`
     INSERT INTO login_history (user_id, ip_address, user_agent, device_fingerprint, success)
     VALUES (?, ?, ?, ?, 1)
   `).run(matchedUser.id, ip, req.headers['user-agent'], fingerprint);
 
-  // Generate token (8 hours)
   const token = jwt.sign({ userId: matchedUser.id }, process.env.JWT_SECRET, { expiresIn: '8h' });
 
   res.json({ success: true, token });
 });
 
-// Dashboard stats
 app.get('/api/dashboard', authenticate, (req, res) => {
   const user = req.user;
   const searchesLeft = user.search_limit === -1 ? -1 : Math.max(0, user.search_limit - user.searches_used);
@@ -254,14 +239,12 @@ app.get('/api/dashboard', authenticate, (req, res) => {
   });
 });
 
-// Phone search
 app.get('/api/search', authenticate, async (req, res) => {
   const { phone } = req.query;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });
 
   const user = req.user;
 
-  // Check search limit
   if (user.search_limit !== -1 && user.searches_used >= user.search_limit) {
     return res.status(403).json({ error: '❌ Search limit exceeded. Contact admin for upgrade.' });
   }
@@ -274,12 +257,10 @@ app.get('/api/search', authenticate, async (req, res) => {
     const results = data.results || [];
     const resultsCount = results.length;
 
-    // Only increment if results found
     if (resultsCount > 0) {
       db.prepare('UPDATE users SET searches_used = searches_used + 1 WHERE id = ?').run(user.id);
     }
 
-    // Log search
     db.prepare(`
       INSERT INTO search_logs (user_id, phone, results_count, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?)
@@ -304,7 +285,6 @@ app.get('/api/search', authenticate, async (req, res) => {
   }
 });
 
-// Admin API
 app.get('/api/admin/stats', (req, res) => {
   const token = req.headers['x-admin-token'];
   if (token !== process.env.ADMIN_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
@@ -362,7 +342,6 @@ app.get('/api/admin/logs', (req, res) => {
   res.json(logs);
 });
 
-// Renew user access
 app.post('/api/admin/renew', (req, res) => {
   const token = req.headers['x-admin-token'];
   if (token !== process.env.ADMIN_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
@@ -418,12 +397,10 @@ app.post('/api/admin/renew', (req, res) => {
   res.json({ success: true, message: 'User renewed successfully' });
 });
 
-// Admin panel page
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin.html'));
 });
 
-// Root redirect
 app.get('/', (req, res) => {
   res.redirect('/login.html');
 });
